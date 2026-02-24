@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+
+data/raw_logs/*.jsonl
+data/normalized_logs/*.csv
+
+!data/raw_logs/.gitkeep
+!data/normalized_logs/.gitkeep

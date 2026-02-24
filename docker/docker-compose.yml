@@ -1,0 +1,23 @@
+services:
+  simulator:
+    build:
+      context: ..
+      dockerfile: docker/simulator.Dockerfile
+    working_dir: /app
+    volumes:
+      - ../data:/app/data
+    command: ["python", "simulator/log_generator.py"]
+
+  ingestion:
+    image: python:3.11-slim
+    working_dir: /app
+    depends_on:
+      simulator:
+        condition: service_completed_successfully
+    volumes:
+      - ../ingestion:/app/ingestion:ro
+      - ../data:/app/data
+    command:
+      - /bin/sh
+      - -c
+      - pip install --no-cache-dir -r ingestion/requirements.txt && python ingestion/normalize.py
