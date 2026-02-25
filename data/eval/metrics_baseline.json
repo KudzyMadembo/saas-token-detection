@@ -1,0 +1,10 @@
+{
+  "true_positives": 7,
+  "false_positives": 0,
+  "false_negatives": 3,
+  "precision": 1.0,
+  "recall": 0.7,
+  "ground_truth_positive_windows": 10,
+  "predicted_positive_windows": 7,
+  "min_score_threshold": 40
+}

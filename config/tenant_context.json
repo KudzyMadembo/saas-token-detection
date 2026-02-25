@@ -1,0 +1,54 @@
+{
+  "tenants": [
+    {
+      "tenant_id": "tenant-acme",
+      "tenant_tier": "enterprise",
+      "timezone": "America/New_York",
+      "expected_countries": ["US", "GB"],
+      "known_ip_ranges": ["3.0.0.0/8", "13.0.0.0/8"],
+      "sensitive_endpoints": ["/v1/admin/export", "/v1/system/backup", "/v1/tokens"],
+      "tokens": {
+        "tok_acme_000": {"token_type": "service"},
+        "tok_acme_004": {"token_type": "service"},
+        "tok_acme_008": {"token_type": "personal"}
+      }
+    },
+    {
+      "tenant_id": "tenant-globex",
+      "tenant_tier": "pro",
+      "timezone": "Europe/London",
+      "expected_countries": ["GB", "DE"],
+      "known_ip_ranges": ["15.0.0.0/8", "35.0.0.0/8"],
+      "sensitive_endpoints": ["/v1/admin/export", "/v1/internal/debug"],
+      "tokens": {
+        "tok_globex_001": {"token_type": "service"},
+        "tok_globex_005": {"token_type": "service"},
+        "tok_globex_009": {"token_type": "personal"}
+      }
+    },
+    {
+      "tenant_id": "tenant-initech",
+      "tenant_tier": "free",
+      "timezone": "America/Chicago",
+      "expected_countries": ["US", "DE"],
+      "known_ip_ranges": ["44.0.0.0/8"],
+      "sensitive_endpoints": ["/v1/internal/debug", "/v1/tokens"],
+      "tokens": {
+        "tok_initech_002": {"token_type": "personal"},
+        "tok_initech_006": {"token_type": "service"}
+      }
+    },
+    {
+      "tenant_id": "tenant-umbrella",
+      "tenant_tier": "enterprise",
+      "timezone": "Europe/Paris",
+      "expected_countries": ["FR", "US"],
+      "known_ip_ranges": ["52.0.0.0/8", "54.0.0.0/8"],
+      "sensitive_endpoints": ["/v1/admin/export", "/v1/system/backup", "/v1/internal/debug"],
+      "tokens": {
+        "tok_umbrella_003": {"token_type": "service"},
+        "tok_umbrella_007": {"token_type": "service"}
+      }
+    }
+  ]
+}

@@ -19,6 +19,7 @@ REQUIRED_FIELDS = [
     "geo_country",
     "auth_method",
 ]
+OPTIONAL_FIELDS = ["is_injected_anomaly", "anomaly_type"]
 
 
 def project_root() -> Path:
@@ -107,7 +108,7 @@ def normalize_row(row: Dict[str, object]) -> Optional[Dict[str, object]]:
     if not event_time or not endpoint or status_code is None:
         return None
 
-    return {
+    normalized: Dict[str, object] = {
         "event_time": event_time,
         "tenant_id": str(row["tenant_id"]).strip(),
         "token_id": str(row["token_id"]).strip(),
@@ -118,6 +119,12 @@ def normalize_row(row: Dict[str, object]) -> Optional[Dict[str, object]]:
         "geo_country": str(row["geo_country"]).strip().upper(),
         "auth_method": str(row["auth_method"]).strip(),
     }
+    if "is_injected_anomaly" in row:
+        normalized["is_injected_anomaly"] = bool(row.get("is_injected_anomaly"))
+    if "anomaly_type" in row:
+        value = row.get("anomaly_type")
+        normalized["anomaly_type"] = str(value).strip() if value is not None else "none"
+    return normalized
 
 
 def normalize_file(source: Path) -> List[Dict[str, object]]:
@@ -155,7 +162,10 @@ def main() -> None:
         raise FileNotFoundError(f"Input file not found: {src}")
 
     rows = normalize_file(src)
-    frame = pd.DataFrame(rows, columns=REQUIRED_FIELDS)
+    all_columns = REQUIRED_FIELDS + [
+        field for field in OPTIONAL_FIELDS if any(field in row for row in rows)
+    ]
+    frame = pd.DataFrame(rows, columns=all_columns)
     frame.to_csv(dst, index=False)
 
     print(f"Normalized {len(rows)} rows to {dst}")

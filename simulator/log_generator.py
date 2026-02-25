@@ -76,6 +76,8 @@ def normal_event(
         "ip_address": faker.ipv4_public(),
         "geo_country": rng.choice(profile.countries),
         "auth_method": "api_token",
+        "is_injected_anomaly": False,
+        "anomaly_type": "none",
     }
 
 
@@ -102,6 +104,8 @@ def anomaly_events(
                 "ip_address": faker.ipv4_public(),
                 "geo_country": rng.choice(profile.countries),
                 "auth_method": "api_token",
+                "is_injected_anomaly": True,
+                "anomaly_type": "volume_spike",
             }
         )
 
@@ -119,6 +123,8 @@ def anomaly_events(
             "ip_address": faker.ipv4_public(),
             "geo_country": new_country,
             "auth_method": "api_token",
+            "is_injected_anomaly": True,
+            "anomaly_type": "new_geo",
         }
     )
 
@@ -127,19 +133,23 @@ def anomaly_events(
         [e for e in ANOMALY_ENDPOINTS if e not in profile.endpoints]
     )
     ts_endpoint = base_time + timedelta(minutes=rng.randint(15, 58))
-    events.append(
-        {
-            "event_time": iso8601(ts_endpoint),
-            "tenant_id": profile.tenant_id,
-            "token_id": profile.token_id,
-            "endpoint": unseen_endpoint,
-            "http_method": rng.choice(HTTP_METHODS),
-            "status_code": choose_status_code(rng),
-            "ip_address": faker.ipv4_public(),
-            "geo_country": rng.choice(profile.countries),
-            "auth_method": "api_token",
-        }
-    )
+    for _ in range(3):
+        ts = ts_endpoint + timedelta(seconds=rng.randint(0, 120))
+        events.append(
+            {
+                "event_time": iso8601(ts),
+                "tenant_id": profile.tenant_id,
+                "token_id": profile.token_id,
+                "endpoint": unseen_endpoint,
+                "http_method": rng.choice(HTTP_METHODS),
+                "status_code": choose_status_code(rng),
+                "ip_address": faker.ipv4_public(),
+                "geo_country": rng.choice(profile.countries),
+                "auth_method": "api_token",
+                "is_injected_anomaly": True,
+                "anomaly_type": "new_endpoint",
+            }
+        )
 
     return events
 
@@ -176,19 +186,25 @@ def main() -> None:
         default=42,
         help="Random seed for reproducible datasets.",
     )
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append to existing raw logs instead of overwriting.",
+    )
     args = parser.parse_args()
 
     events = generate_events(token_count=args.tokens, seed=args.seed)
     output_path = resolve_output_path()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Append so repeated runs can build larger datasets over time.
-    with output_path.open("a", encoding="utf-8") as f:
+    mode = "a" if args.append else "w"
+    with output_path.open(mode, encoding="utf-8") as f:
         for event in events:
             f.write(json.dumps(event))
             f.write("\n")
 
-    print(f"Wrote {len(events)} events to {output_path}")
+    action = "Appended" if args.append else "Wrote"
+    print(f"{action} {len(events)} events to {output_path}")
 
 
 if __name__ == "__main__":
