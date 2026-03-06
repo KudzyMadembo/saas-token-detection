@@ -8,6 +8,13 @@ This repository now follows the AB Tasty architectural and integration standard 
 
 Use that document as the primary technical reference for API module boundaries, OAuth2 security patterns, deployment modes, and operational governance.
 
+## Beginner Docs
+
+If you are new to this repository, start here:
+
+- `docs/CODEBASE_EXPLAINED.md` (end-to-end project walkthrough)
+- `docs/HOW_TO_RUN.md` (copy-paste setup and run commands)
+
 ## Final Deliverables
 
 - [x] Correlation + context enrichment working
