@@ -8,3 +8,5 @@ data/normalized_logs/*.csv
 
 !data/raw_logs/.gitkeep
 !data/normalized_logs/.gitkeep
+
+testdata/access.log

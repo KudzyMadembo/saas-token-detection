@@ -1,5 +1,13 @@
 # saas-token-detection
 
+## Canonical Architecture Standard
+
+This repository now follows the AB Tasty architectural and integration standard documented in:
+
+- `docs/AB_TASTY_API_ECOSYSTEM.md`
+
+Use that document as the primary technical reference for API module boundaries, OAuth2 security patterns, deployment modes, and operational governance.
+
 ## Final Deliverables
 
 - [x] Correlation + context enrichment working
@@ -198,6 +206,53 @@ The script runs:
 4. tuned profile detection
 5. evaluation for both profiles
 
+## Analyze AB Tasty CSV Input
+
+You can run analysis directly from:
+
+- `data/raw_logs/AB_Tasty_Synthetic_30_Day_Logs.csv`
+
+One-command scripts:
+
+```powershell
+./scripts/run_ab_tasty_analysis.ps1
+```
+
+```bash
+./scripts/run_ab_tasty_analysis.sh
+```
+
+Manual commands:
+
+```powershell
+python ingestion/normalize.py --input data/raw_logs/AB_Tasty_Synthetic_30_Day_Logs.csv
+python detection/run_pipeline.py --profile tuned
+```
+
+The normalizer auto-detects AB Tasty synthetic CSV schema and maps it to the canonical pipeline columns.
+
+## Visualization for Presentation
+
+Build normalized data, alerts, and a presentation-ready HTML report in one command:
+
+```powershell
+./scripts/run_ab_tasty_viz.ps1
+```
+
+```bash
+./scripts/run_ab_tasty_viz.sh
+```
+
+Interactive dashboard:
+
+```bash
+streamlit run visualization/app.py
+```
+
+Notebook walkthrough:
+
+- `notebooks/ab_tasty_visualization.ipynb`
+
 ## Output Map
 
 - Raw logs: `data/raw_logs/api_logs.jsonl`
@@ -213,6 +268,8 @@ The script runs:
 - Evaluation:
   - `data/eval/metrics_baseline.json`
   - `data/eval/metrics.json`
+- Visualization:
+  - `data/reports/ab_tasty_report.html`
 
 ## Sample Outputs for Presentation
 
@@ -229,7 +286,7 @@ Prepared in `data/sample_outputs/`:
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r ingestion/requirements.txt -r simulator/requirements.txt
+pip install -r ingestion/requirements.txt -r simulator/requirements.txt -r visualization/requirements.txt
 ./scripts/run_demo.sh
 ```
 
@@ -238,7 +295,7 @@ PowerShell equivalent:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r ingestion/requirements.txt -r simulator/requirements.txt
+pip install -r ingestion/requirements.txt -r simulator/requirements.txt -r visualization/requirements.txt
 .\scripts\run_demo.ps1
 ```
 

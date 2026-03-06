@@ -61,6 +61,8 @@ def build_token_baselines(frame: pd.DataFrame, top_n_endpoints: int = 5) -> Dict
 
     grouped = frame.groupby(["tenant_id", "token_id"], sort=True)
     for (tenant_id, token_id), group in grouped:
+        tenant_id_str = str(tenant_id)
+        token_id_str = str(token_id)
         hourly_counts = group.groupby("hour_bucket").size().astype(float)
         hour_hist = (
             group["event_time"]
@@ -73,9 +75,9 @@ def build_token_baselines(frame: pd.DataFrame, top_n_endpoints: int = 5) -> Dict
         auth_method_counts = group["auth_method"].astype(str).value_counts()
         dominant_auth_method = str(auth_method_counts.index[0]) if not auth_method_counts.empty else "unknown"
 
-        baselines[(tenant_id, token_id)] = {
-            "tenant_id": tenant_id,
-            "token_id": token_id,
+        baselines[(tenant_id_str, token_id_str)] = {
+            "tenant_id": tenant_id_str,
+            "token_id": token_id_str,
             "volume_mean": round(float(hourly_counts.mean()), 4),
             "volume_std": round(float(hourly_counts.std(ddof=0)), 4),
             "volume_p95": round(float(hourly_counts.quantile(0.95)), 4),
@@ -83,9 +85,9 @@ def build_token_baselines(frame: pd.DataFrame, top_n_endpoints: int = 5) -> Dict
             "known_ips": sorted(group["ip_address"].astype(str).unique().tolist()),
             "known_endpoints": sorted(group["endpoint"].astype(str).unique().tolist()),
             "known_auth_methods": sorted(group["auth_method"].astype(str).unique().tolist()),
-            "auth_method_distribution": auth_method_counts.to_dict(),
+            "auth_method_distribution": {str(k): int(v) for k, v in auth_method_counts.to_dict().items()},
             "dominant_auth_method": dominant_auth_method,
-            "top_endpoints": endpoint_counts.head(top_n_endpoints).to_dict(),
+            "top_endpoints": {str(k): int(v) for k, v in endpoint_counts.head(top_n_endpoints).to_dict().items()},
             "hour_histogram": {str(hour): int(count) for hour, count in hour_hist.items()},
             "total_events": int(len(group)),
             "hour_buckets_seen": int(hourly_counts.shape[0]),

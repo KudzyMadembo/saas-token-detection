@@ -1,4 +1,5 @@
 import json
+import argparse
 from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlsplit
@@ -20,6 +21,18 @@ REQUIRED_FIELDS = [
     "auth_method",
 ]
 OPTIONAL_FIELDS = ["is_injected_anomaly", "anomaly_type"]
+AB_TASTY_COLUMNS = {
+    "Timestamp",
+    "Unix_Timestamp",
+    "Visitor_ID",
+    "Campaign_ID",
+    "Variation_ID",
+    "Hit_Type",
+    "URL",
+    "IP_Address",
+    "Location",
+    "User_Agent",
+}
 
 
 def project_root() -> Path:
@@ -32,6 +45,19 @@ def input_path() -> Path:
 
 def output_path() -> Path:
     return project_root() / "data" / "normalized_logs" / "api_logs_normalized.csv"
+
+
+def parse_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return normalized in {"1", "true", "yes", "y", "t"}
+    return False
 
 
 def normalize_endpoint(raw_endpoint: object) -> Optional[str]:
@@ -59,6 +85,16 @@ def normalize_endpoint(raw_endpoint: object) -> Optional[str]:
 
 
 def normalize_timestamp(raw_ts: object) -> Optional[str]:
+    if raw_ts is None:
+        return None
+    if isinstance(raw_ts, (int, float)):
+        try:
+            parsed = pd.to_datetime(raw_ts, unit="s", utc=True)
+        except (TypeError, ValueError):
+            return None
+        if pd.isna(parsed):
+            return None
+        return parsed.to_pydatetime().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     if not isinstance(raw_ts, str) or not raw_ts.strip():
         return None
     try:
@@ -120,14 +156,14 @@ def normalize_row(row: Dict[str, object]) -> Optional[Dict[str, object]]:
         "auth_method": str(row["auth_method"]).strip(),
     }
     if "is_injected_anomaly" in row:
-        normalized["is_injected_anomaly"] = bool(row.get("is_injected_anomaly"))
+        normalized["is_injected_anomaly"] = parse_bool(row.get("is_injected_anomaly"))
     if "anomaly_type" in row:
         value = row.get("anomaly_type")
         normalized["anomaly_type"] = str(value).strip() if value is not None else "none"
     return normalized
 
 
-def normalize_file(source: Path) -> List[Dict[str, object]]:
+def normalize_jsonl_file(source: Path) -> List[Dict[str, object]]:
     normalized_rows: List[Dict[str, object]] = []
 
     with source.open("r", encoding="utf-8") as f:
@@ -153,9 +189,82 @@ def normalize_file(source: Path) -> List[Dict[str, object]]:
     return normalized_rows
 
 
+def is_missing(value: object) -> bool:
+    return value is None or (isinstance(value, float) and pd.isna(value))
+
+
+def looks_like_ab_tasty_csv(columns: List[str]) -> bool:
+    return AB_TASTY_COLUMNS.issubset(set(columns))
+
+
+def map_ab_tasty_row(row: Dict[str, object]) -> Dict[str, object]:
+    timestamp = row.get("Timestamp")
+    if is_missing(timestamp):
+        timestamp = row.get("Unix_Timestamp")
+
+    campaign_id = row.get("Campaign_ID")
+    variation_id = row.get("Variation_ID")
+    hit_type = str(row.get("Hit_Type")).strip().upper() if not is_missing(row.get("Hit_Type")) else ""
+    user_agent = str(row.get("User_Agent")).strip() if not is_missing(row.get("User_Agent")) else "unknown"
+    tenant_id = str(campaign_id).strip() if not is_missing(campaign_id) else "unknown_campaign"
+    token_id = str(variation_id).strip() if not is_missing(variation_id) else str(row.get("Visitor_ID")).strip()
+    return {
+        "event_time": timestamp,
+        "tenant_id": tenant_id,
+        # Variation ID is a stable identity across events in this synthetic dataset.
+        "token_id": token_id,
+        "endpoint": row.get("URL"),
+        # Approximate method from event category to keep analyzer features useful.
+        "http_method": "POST" if hit_type == "TRANSACTION" else "GET",
+        "status_code": 200,
+        "ip_address": row.get("IP_Address"),
+        "geo_country": row.get("Location"),
+        "auth_method": user_agent.lower(),
+    }
+
+
+def normalize_csv_file(source: Path) -> List[Dict[str, object]]:
+    frame = pd.read_csv(source)
+    rows = frame.to_dict(orient="records")
+    normalized_rows: List[Dict[str, object]] = []
+    columns = frame.columns.tolist()
+    ab_tasty_mode = looks_like_ab_tasty_csv(columns)
+
+    for row in rows:
+        candidate = map_ab_tasty_row(row) if ab_tasty_mode else row
+        normalized = normalize_row(candidate)
+        if normalized is not None:
+            normalized_rows.append(normalized)
+
+    normalized_rows.sort(key=lambda row: row["event_time"])
+    return normalized_rows
+
+
+def normalize_file(source: Path) -> List[Dict[str, object]]:
+    suffix = source.suffix.lower()
+    if suffix in {".jsonl", ".json"}:
+        return normalize_jsonl_file(source)
+    if suffix == ".csv":
+        return normalize_csv_file(source)
+    raise ValueError(f"Unsupported input format: {source}. Use .jsonl, .json, or .csv")
+
+
 def main() -> None:
-    src = input_path()
-    dst = output_path()
+    parser = argparse.ArgumentParser(description="Normalize raw logs into canonical CSV.")
+    parser.add_argument(
+        "--input",
+        default=str(input_path()),
+        help="Raw input file (.jsonl/.json/.csv).",
+    )
+    parser.add_argument(
+        "--output",
+        default=str(output_path()),
+        help="Normalized CSV output path.",
+    )
+    args = parser.parse_args()
+
+    src = Path(args.input)
+    dst = Path(args.output)
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     if not src.exists():
