@@ -5,11 +5,12 @@
 - Typical abuse patterns (credential theft, unusual endpoint access, geo drift)
 
 ## 2. Pipeline Overview
-- Simulator -> Normalization -> Baselines -> Rules -> Correlation -> Controls -> Scoring -> Evaluation
-- One-command run: `./scripts/run_demo.sh`
+- AB Tasty CSV -> Normalization -> Baselines -> Rules -> Correlation -> Controls -> Scoring
+- Visualization layer: HTML report + Streamlit dashboard + notebook
+- One-command run: `./scripts/run_ab_tasty_viz.ps1` (Windows) or `./scripts/run_ab_tasty_viz.sh` (bash)
 
 ## 3. Simulator and Injected Anomalies
-- Synthetic tenants/tokens with normal behavior
+- AB Tasty synthetic dataset mapped into canonical pipeline schema
 - Injected anomalies: `volume_spike`, `new_geo`, `new_endpoint`
 - Labeled fields: `is_injected_anomaly`, `anomaly_type`
 
@@ -27,7 +28,10 @@
 ## 6. Risk Scoring
 - Weighted signal model + multipliers
 - Correlation adjustments to final score
-- Severity bands: high / medium / low
+- Severity bands for presentation:
+  - `high >= 70`
+  - `medium = 40..69`
+  - `low < 40`
 
 ## 7. Example Alert
 - Show one alert JSON with:
@@ -38,10 +42,10 @@
   - `tenant_context`
   - `suppressed`
 
-## 8. Evaluation Results
-- TP / FP / FN
-- Precision and recall
-- Before vs after tuning summary
+## 8. Severity Difference View (Presentation)
+- Compare `high` vs `medium` vs `low` counts
+- Show percentages and sample windows by severity
+- Use HTML report section "Severity Difference (High vs Medium vs Low)"
 
 ## 9. Limitations and Future Work
 - Synthetic data realism limits
@@ -49,6 +53,7 @@
 - Token lifecycle context and user identity joins
 
 ## 10. Live Demo Steps
-- Run `./scripts/run_demo.sh`
-- Open `data/alerts/alerts.jsonl`
-- Open `data/eval/metrics.json`
+- Run `./scripts/run_ab_tasty_viz.ps1` (or `.sh`)
+- Open `data/reports/ab_tasty_report.html`
+- (Optional) Launch dashboard: `streamlit run visualization/app.py`
+- Highlight severity comparison tables/charts (`high`, `medium`, `low`)
